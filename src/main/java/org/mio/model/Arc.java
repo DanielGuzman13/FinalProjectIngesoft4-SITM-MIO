@@ -13,6 +13,22 @@ public class Arc {
         this.orientation = orientation;
     }
 
+    public Stop getFrom() {
+        return from;
+    }
+
+    public Stop getTo() {
+        return to;
+    }
+
+    public int getLineId() {
+        return lineId;
+    }
+
+    public int getOrientation() {
+        return orientation;
+    }
+
     @Override
     public String toString() {
         return "[" + lineId + " | " + orientation + "] "

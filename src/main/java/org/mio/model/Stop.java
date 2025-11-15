@@ -19,6 +19,10 @@ public class Stop {
         return stopId;
     }
 
+    public String getShortName() {
+        return shortName;
+    }
+
     @Override
     public String toString() {
         return shortName + " (" + stopId + ")";

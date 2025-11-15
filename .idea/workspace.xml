@@ -5,23 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="39b21ff0-39dc-4bcb-854d-570493820808" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/graph/Graph.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/graph/GraphBuilder.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/model/Arc.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/model/Line.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/model/LineStop.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/model/Stop.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/util/CsvReader.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/visual/GraphRenderer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.14/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.14/executionHistory/executionHistory.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.14/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.14/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/Line.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/LineStop.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/mio/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/Stop.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/mio/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/mio/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/mio/model/Arc.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/mio/model/Arc.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/mio/model/Stop.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/mio/model/Stop.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,6 +39,9 @@
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="35WHq72SpCDgY1BLEQrHzRrZMxz" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -74,6 +68,11 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\default.LAPTOP-M81T5L1M\Desktop\ICESI2025II\ingesoft\FinalProjectIngesoft4-SITM-MIO\src\main" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.mio.Main" />
@@ -112,7 +111,7 @@
       <workItem from="1763219126781" duration="897000" />
       <workItem from="1763220474333" duration="24000" />
       <workItem from="1763221460689" duration="36000" />
-      <workItem from="1763221554232" duration="887000" />
+      <workItem from="1763221554232" duration="1995000" />
     </task>
     <servers />
   </component>
