@@ -1,0 +1,1 @@
+rootProject.name = "FinalProjectIngesoft4-SITM-MIO"
