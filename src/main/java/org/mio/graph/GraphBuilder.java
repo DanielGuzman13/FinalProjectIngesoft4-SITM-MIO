@@ -7,10 +7,12 @@ import java.util.*;
 
 public class GraphBuilder {
 
+    private Map<Integer, Stop> stops;
+
     public Graph build() {
 
         // ------ Load stops ------
-        Map<Integer, Stop> stops = new HashMap<>();
+        stops = new HashMap<>();
         for (String[] row : CsvReader.read("stops-241.csv")) {
             int stopId = Integer.parseInt(row[0].replace("\"", ""));
             String shortName = row[2].replace("\"", "");
@@ -53,5 +55,9 @@ public class GraphBuilder {
         }
 
         return graph;
+    }
+
+    public Collection<Stop> getStops() {
+        return stops.values();
     }
 }
