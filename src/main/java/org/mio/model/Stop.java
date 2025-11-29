@@ -15,12 +15,25 @@ public class Stop {
         this.lon = lon;
     }
 
+    public String getShortName() {
+        return shortName;
+    }
+
+    public String getLongName() {
+        return longName;
+    }
+
     public int getStopId() {
         return stopId;
     }
 
-    public String getShortName() {
-        return shortName;
+
+    public double getLat() {
+        return lat;
+    }
+
+    public double getLon() {
+        return lon;
     }
 
     @Override

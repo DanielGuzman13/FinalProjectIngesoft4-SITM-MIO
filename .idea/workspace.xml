@@ -5,13 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="39b21ff0-39dc-4bcb-854d-570493820808" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/visual/GraphRenderer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.14/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.14/executionHistory/executionHistory.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.14/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.14/fileHashes/fileHashes.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/geo/CoordinateMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/ui/AppWindow.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/ui/ControlPanel.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/ui/InfoPanel.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/ui/MapPanel.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/mio/visual/MapRenderer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/map/cali-map.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/org/mio/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/mio/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/mio/model/Arc.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/mio/model/Arc.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/mio/graph/GraphBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/mio/graph/GraphBuilder.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/org/mio/model/Stop.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/mio/model/Stop.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -54,7 +57,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "Merging main",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
     "node.js.detected.package.eslint": "true",
@@ -111,7 +114,8 @@
       <workItem from="1763219126781" duration="897000" />
       <workItem from="1763220474333" duration="24000" />
       <workItem from="1763221460689" duration="36000" />
-      <workItem from="1763221554232" duration="1995000" />
+      <workItem from="1763221554232" duration="4244000" />
+      <workItem from="1764452931491" duration="584000" />
     </task>
     <servers />
   </component>
