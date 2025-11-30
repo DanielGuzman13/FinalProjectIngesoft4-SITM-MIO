@@ -32,9 +32,60 @@ java {
     }
 }
 
+// Configuración para múltiples JARs ejecutables
+// Master JAR
+task masterJar(type: Jar) {
+    archiveBaseName = 'sitm-master'
+    archiveVersion = '1.0'
+    
+    manifest {
+        attributes(
+            'Main-Class': 'org.mio.processing.master.MasterNodeService'
+        )
+    }
+    
+    from sourceSets.main.output
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.filter { it.exists() }.collect { it.isDirectory() ? it : zipTree(it) }
+    } {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+}
+
+// Worker JAR
+task workerJar(type: Jar) {
+    archiveBaseName = 'sitm-worker'
+    archiveVersion = '1.0'
+    
+    manifest {
+        attributes(
+            'Main-Class': 'org.mio.processing.worker.WorkerNodeService'
+        )
+    }
+    
+    from sourceSets.main.output
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.filter { it.exists() }.collect { it.isDirectory() ? it : zipTree(it) }
+    } {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+}
+
+// Tarea para construir todos los JARs
+task buildAllJars {
+    dependsOn masterJar, workerJar
+}
+
+// Aplicación por defecto (para desarrollo)
 application {
     // Define the main class for the application.
-    mainClass = 'org.mio.Main'
+    mainClass = 'org.mio.processing.master.MasterNodeService'
 }
 
 tasks.named('test') {
