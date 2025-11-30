@@ -46,5 +46,38 @@ public class LocalSpeedAnalysisService {
         System.out.println("Paradas en el sistema: " + graphBuilder.getStops().size());
         System.out.println("\n--- Iniciando procesamiento local ---\n");
 
+        LocalMasterNode master = new LocalMasterNode(graph, numWorkers);
+
+        long startTime = System.currentTimeMillis();
+        Map<String, ArcSpeed> results = master.processDatagrams(csvPath);
+        long endTime = System.currentTimeMillis();
+
+        System.out.println("\nAnálisis completado en " + ((endTime - startTime) / 1000.0) + " segundos");
+
+        master.printSpeedResults();
+
+        System.out.println("\n=== ESTADÍSTICAS FINALES ===");
+        System.out.println("Total arcos analizados: " + results.size());
+
+        double avgSpeed = results.values().stream()
+                .filter(arcSpeed -> arcSpeed.getSampleCount() >= 5)
+                .mapToDouble(ArcSpeed::getAverageSpeed)
+                .average()
+                .orElse(0.0);
+
+        System.out.println("Velocidad promedio general: " + String.format("%.2f", avgSpeed) + " km/h");
+
+        long totalSamples = results.values().stream()
+                .mapToLong(ArcSpeed::getSampleCount)
+                .sum();
+
+        System.out.println("Total muestras procesadas: " + totalSamples);
+
+        System.out.println("\n=== PRÓXIMO PASO ===");
+        System.out.println("Para despliegue distribuido con TCP/IP:");
+        System.out.println("1. Master Node escuchará en puerto TCP (ej: 8080)");
+        System.out.println("2. Workers se conectarán via TCP a Master");
+        System.out.println("3. Workers se identificarán por IP:Puerto");
+        System.out.println("4. Master distribuirá trabajo via TCP");
     }
 }
