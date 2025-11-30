@@ -17,11 +17,11 @@ public class SpeedAnalysisService {
         
         Scanner scanner = new Scanner(System.in);
         
-        System.out.print("Ingrese la ruta del archivo de datagramas (ej: datagrams4history.csv): ");
+        System.out.print("Ingrese la ruta del archivo de datagramas (default: C:\\Users\\default.LAPTOP-M81T5L1M\\Desktop\\ICESI2025II\\ingesoft 4\\dataset\\datagrams4history): ");
         String csvPath = scanner.nextLine().trim();
         
         if (csvPath.isEmpty()) {
-            csvPath = "datagrams4history.csv";
+            csvPath = "C:\\Users\\default.LAPTOP-M81T5L1M\\Desktop\\ICESI2025II\\ingesoft 4\\dataset\\datagrams4history";
         }
         
         System.out.print("Ingrese el número de workers a utilizar (default 4): ");

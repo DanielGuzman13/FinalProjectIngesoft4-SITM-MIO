@@ -40,7 +40,7 @@ public class PerformanceTest {
     }
     
     private static TestResult runPerformanceTest(Graph graph, int targetSize, int numWorkers) {
-        String testFile = "test_data_" + targetSize + ".csv";
+        String testFile = "C:\\Users\\default.LAPTOP-M81T5L1M\\Desktop\\ICESI2025II\\ingesoft 4\\dataset\\test_data_" + targetSize + ".csv";
         
         MasterNode master = new MasterNode(graph, numWorkers);
         

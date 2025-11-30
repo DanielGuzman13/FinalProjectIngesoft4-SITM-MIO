@@ -103,15 +103,15 @@ public class MasterNode {
         try {
             for (String[] row : CsvReader.read(filePath)) {
                 try {
-                    if (row.length < 7) continue;
+                    if (row.length < 12) continue;
                     
-                    String busId = row[0].replace("\"", "").trim();
-                    double latitude = Double.parseDouble(row[1].replace("\"", "").trim());
-                    double longitude = Double.parseDouble(row[2].replace("\"", "").trim());
-                    LocalDateTime timestamp = LocalDateTime.parse(row[3].replace("\"", "").trim(), formatter);
-                    int lineId = Integer.parseInt(row[4].replace("\"", "").trim());
-                    int orientation = Integer.parseInt(row[5].replace("\"", "").trim());
-                    String eventType = row[6].replace("\"", "").trim();
+                    String busId = row[11].replace("\"", "").trim();
+                    double latitude = Double.parseDouble(row[5].replace("\"", "").trim()) / 1000000.0;
+                    double longitude = Double.parseDouble(row[6].replace("\"", "").trim()) / 1000000.0;
+                    LocalDateTime timestamp = LocalDateTime.parse(row[12].replace("\"", "").trim(), formatter);
+                    int lineId = Integer.parseInt(row[8].replace("\"", "").trim());
+                    int orientation = row[7].equals("0") ? 1 : 2;
+                    String eventType = "GPS_POSITION";
                     
                     Datagram datagram = new Datagram(busId, latitude, longitude, timestamp, lineId, orientation, eventType);
                     workQueue.offer(datagram);
