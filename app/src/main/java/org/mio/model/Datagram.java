@@ -1,12 +1,15 @@
 package org.mio.model;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public class Datagram {
+public class Datagram implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     private String busId;
     private double latitude;
     private double longitude;
-    private LocalDateTime timestamp;
+    private String timestamp; // String en formato "yyyy-MM-dd HH:mm:ss"
     private int lineId;
     private int orientation;
     private String eventType;
@@ -16,7 +19,7 @@ public class Datagram {
         this.busId = busId;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.timestamp = timestamp;
+        this.timestamp = timestamp.toString(); // Convertir a String
         this.lineId = lineId;
         this.orientation = orientation;
         this.eventType = eventType;
@@ -25,7 +28,7 @@ public class Datagram {
     public String getBusId() { return busId; }
     public double getLatitude() { return latitude; }
     public double getLongitude() { return longitude; }
-    public LocalDateTime getTimestamp() { return timestamp; }
+    public LocalDateTime getTimestamp() { return LocalDateTime.parse(timestamp); }
     public int getLineId() { return lineId; }
     public int getOrientation() { return orientation; }
     public String getEventType() { return eventType; }
