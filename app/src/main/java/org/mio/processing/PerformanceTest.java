@@ -11,7 +11,7 @@ import java.util.*;
 public class PerformanceTest {
     
     public static void main(String[] args) {
-        System.out.println("=== PRUEBAS DE PERFORMANCE - ESCALAMIENTO LOGARÍTMICO ===\n");
+        System.out.println("=== PRUEBAS DE PERFORMANCE - ESCALAMIENTO LOGARITMICO ===\n");
         
         GraphBuilder graphBuilder = new GraphBuilder();
         Graph graph = graphBuilder.build();

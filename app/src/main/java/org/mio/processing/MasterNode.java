@@ -13,21 +13,51 @@ public class MasterNode {
     private final org.mio.graph.Graph graph;
     private final int numWorkers;
     private final ExecutorService executor;
-    private final List<WorkerNode> workers;
+    private final List<WorkerNode> localWorkers;
+    private final List<RemoteWorkerNode> remoteWorkers;
     private final BlockingQueue<Datagram> workQueue;
     private final Map<String, ArcSpeed> aggregatedResults;
+    
+    // Configuración para modo distribuido
+    private final boolean distributedMode;
+    private final int masterPort;
+    private final List<String> workerAddresses; // IP:Puerto de workers remotos
 
     public MasterNode(org.mio.graph.Graph graph, int numWorkers) {
+        this(graph, numWorkers, false, 8080, Collections.emptyList());
+    }
+    
+    public MasterNode(org.mio.graph.Graph graph, int numWorkers, boolean distributedMode, 
+                     int masterPort, List<String> workerAddresses) {
         this.graph = graph;
         this.numWorkers = numWorkers;
+        this.distributedMode = distributedMode;
+        this.masterPort = masterPort;
+        this.workerAddresses = workerAddresses;
         this.executor = Executors.newFixedThreadPool(numWorkers);
-        this.workers = new ArrayList<>();
+        this.localWorkers = new ArrayList<>();
+        this.remoteWorkers = new ArrayList<>();
         this.workQueue = new LinkedBlockingQueue<>();
         this.aggregatedResults = new ConcurrentHashMap<>();
     }
 
     public Map<String, ArcSpeed> processDatagrams(String csvFilePath) {
-        System.out.println("Iniciando procesamiento de datagramas desde: " + csvFilePath);
+        System.out.println("=== INICIANDO PROCESAMIENTO ===");
+        if (distributedMode) {
+            System.out.println("MODO: DISTRIBUIDO");
+            System.out.println("Master Node: localhost:" + masterPort);
+            System.out.println("Workers Remotos: " + workerAddresses.size());
+            for (String addr : workerAddresses) {
+                System.out.println("  - " + addr);
+            }
+        } else {
+            System.out.println("MODO: LOCAL");
+            System.out.println("Master Node: localhost (ThreadPool)");
+            System.out.println("Workers: " + numWorkers + " threads locales");
+        }
+        System.out.println("Archivo: " + csvFilePath);
+        System.out.println("Arcos en grafo: " + graph.getArcs().size());
+        System.out.println();
         
         long startTime = System.currentTimeMillis();
         AtomicLong totalDatagrams = new AtomicLong(0);
@@ -69,8 +99,9 @@ public class MasterNode {
         double processingTime = (endTime - startTime) / 1000.0;
         
         System.out.println("\n=== RESUMEN DE PROCESAMIENTO ===");
+        System.out.println("Modo: " + (distributedMode ? "DISTRIBUIDO" : "LOCAL"));
+        System.out.println("Workers: " + (distributedMode ? workerAddresses.size() + " remotos" : numWorkers + " locales"));
         System.out.println("Datagramas procesados: " + totalDatagrams.get());
-        System.out.println("Workers utilizados: " + numWorkers);
         System.out.println("Tiempo total: " + String.format("%.2f", processingTime) + " segundos");
         System.out.println("Rendimiento: " + String.format("%.0f", totalDatagrams.get() / processingTime) + " datagramas/segundo");
         System.out.println("Arcos con velocidad calculada: " + aggregatedResults.size());
@@ -79,19 +110,41 @@ public class MasterNode {
     }
 
     private void createWorkers() {
-        for (int i = 0; i < numWorkers; i++) {
-            workers.add(new WorkerNode(i, workQueue, graph));
+        if (distributedMode) {
+            // En modo distribuido, crear workers remotos (TCP)
+            for (int i = 0; i < workerAddresses.size(); i++) {
+                String[] parts = workerAddresses.get(i).split(":");
+                String ip = parts[0];
+                int port = Integer.parseInt(parts[1]);
+                remoteWorkers.add(new RemoteWorkerNode(i, ip, port, graph));
+            }
+        } else {
+            // En modo local, crear workers con ThreadPool
+            for (int i = 0; i < numWorkers; i++) {
+                localWorkers.add(new WorkerNode(i, workQueue, graph));
+            }
         }
     }
 
     private void startWorkers() {
-        for (WorkerNode worker : workers) {
-            executor.submit(worker);
+        if (distributedMode) {
+            // Iniciar workers remotos via TCP
+            for (RemoteWorkerNode worker : remoteWorkers) {
+                executor.submit(worker);
+            }
+        } else {
+            // Iniciar workers locales
+            for (WorkerNode worker : localWorkers) {
+                executor.submit(worker);
+            }
         }
     }
 
     private void stopWorkers() {
-        for (WorkerNode worker : workers) {
+        for (WorkerNode worker : localWorkers) {
+            worker.stop();
+        }
+        for (RemoteWorkerNode worker : remoteWorkers) {
             worker.stop();
         }
     }
@@ -137,20 +190,30 @@ public class MasterNode {
     private void aggregateResults() {
         aggregatedResults.clear();
         
-        for (WorkerNode worker : workers) {
+        // Agregar resultados de workers locales
+        for (WorkerNode worker : localWorkers) {
             Map<String, ArcSpeed> workerResults = worker.getResults();
+            addWorkerResults(workerResults);
+        }
+        
+        // Agregar resultados de workers remotos
+        for (RemoteWorkerNode worker : remoteWorkers) {
+            Map<String, ArcSpeed> workerResults = worker.getResults();
+            addWorkerResults(workerResults);
+        }
+    }
+    
+    private void addWorkerResults(Map<String, ArcSpeed> workerResults) {
+        for (Map.Entry<String, ArcSpeed> entry : workerResults.entrySet()) {
+            String arcKey = entry.getKey();
+            ArcSpeed workerSpeed = entry.getValue();
             
-            for (Map.Entry<String, ArcSpeed> entry : workerResults.entrySet()) {
-                String arcKey = entry.getKey();
-                ArcSpeed workerSpeed = entry.getValue();
-                
-                aggregatedResults.computeIfAbsent(arcKey, k -> new ArcSpeed(workerSpeed.getArc()));
-                
-                ArcSpeed aggregated = aggregatedResults.get(arcKey);
-                
-                for (int i = 0; i < workerSpeed.getSampleCount(); i++) {
-                    aggregated.addSpeedSample(workerSpeed.getAverageSpeed());
-                }
+            aggregatedResults.computeIfAbsent(arcKey, k -> new ArcSpeed(workerSpeed.getArc()));
+            
+            ArcSpeed aggregated = aggregatedResults.get(arcKey);
+            
+            for (int i = 0; i < workerSpeed.getSampleCount(); i++) {
+                aggregated.addSpeedSample(workerSpeed.getAverageSpeed());
             }
         }
     }
