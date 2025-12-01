@@ -23,6 +23,7 @@ public class WorkerNodeService implements Runnable {
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
+    private long processedCount;
 
     public WorkerNodeService(int workerId, String masterIp, int masterPort, Graph graph) {
         this.workerId = workerId;
@@ -57,7 +58,7 @@ public class WorkerNodeService implements Runnable {
             System.out.println(String.format(WorkerConfig.CONNECTED_TO_MASTER, workerId));
             System.out.println(String.format(WorkerConfig.WAITING_FOR_DATAGRAMS, workerId));
             
-            long processedCount = 0;
+            processedCount = 0;
             long lastReportTime = System.currentTimeMillis();
             
             // Procesar datagramas del Master
@@ -120,7 +121,8 @@ public class WorkerNodeService implements Runnable {
     }
 
     private void processDatagram(Datagram datagram) {
-        if (!"GPS_POSITION".equals(datagram.getEventType())) {
+        // El eventType en el CSV es "0", no "GPS_POSITION"
+        if (!"0".equals(datagram.getEventType())) {
             return;
         }
 
@@ -135,12 +137,30 @@ public class WorkerNodeService implements Runnable {
         Datagram previous = history.get(history.size() - 2);
         double speed = SpeedCalculator.calculateSpeed(previous, datagram);
         
+        // Logging para depuración
+        if (processedCount % 50 == 0) {
+            System.out.println(String.format("Worker %d: Procesados %d datagramas | Velocidad actual: %.2f km/h | Arcos con velocidad: %d", 
+                workerId, processedCount, speed, results.size()));
+        }
+        
         if (speed > WorkerConfig.MIN_SPEED_THRESHOLD && speed < WorkerConfig.MAX_SPEED_THRESHOLD) {
             Arc arc = SpeedCalculator.findArcForDatagram(graph, datagram, history);
             if (arc != null) {
                 String arcKey = arc.getFrom().getStopId() + "-" + arc.getTo().getStopId() + "-" + arc.getLineId();
                 
                 results.computeIfAbsent(arcKey, k -> new ArcSpeed(arc)).addSpeedSample(speed);
+                
+                // Mostrar cuando se encuentra un arco
+                if (results.size() % 10 == 0) {
+                    System.out.println(String.format("Worker %d: ¡Arco encontrado! %s - Velocidad: %.2f km/h", 
+                        workerId, arcKey, speed));
+                }
+            } else {
+                // Mostrar cuando no se encuentra arco (solo algunas veces para no saturar)
+                if (processedCount % 100 == 0) {
+                    System.out.println(String.format("Worker %d: Sin arco para datagrama del bus %s en (%.6f, %.6f)", 
+                        workerId, busKey, datagram.getLatitude(), datagram.getLongitude()));
+                }
             }
         }
 
