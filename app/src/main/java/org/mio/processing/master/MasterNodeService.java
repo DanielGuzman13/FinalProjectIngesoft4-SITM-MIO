@@ -2,22 +2,89 @@ package org.mio.processing.master;
 
 import org.mio.graph.Graph;
 import org.mio.graph.GraphBuilder;
-import org.mio.model.ArcSpeed;
-import org.mio.model.Datagram;
-import org.mio.util.BatchCsvReader;
+import org.mio.model.*;
 import org.mio.processing.config.MasterConfig;
+import org.mio.processing.master.WorkerConnection;
 
+import java.io.*;
+import java.net.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.net.*;
-import java.io.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MasterNodeService {
     
+    public static void main(String[] args) {
+        try {
+            // Parámetros: [archivo_csv] [datagramas_a_procesar]
+            if (args.length < 2) {
+                System.out.println("Uso: java -jar sitm-master-1.0.jar <archivo_csv> <datagramas_a_procesar>");
+                System.out.println("Ejemplo: java -jar sitm-master-1.0.jar datagrams.csv 1000000");
+                System.out.println("Opciones de datagramas: 1000, 10000, 100000, 1000000");
+                System.out.println();
+                System.out.println("EJEMPLOS CON RUTA COMPLETA:");
+                System.out.println("java -jar sitm-master-1.0.jar \"C:\\ruta\\datagrams.csv\" 1000000");
+                System.out.println("run-master.bat \"C:\\ruta\\datagrams.csv\" 1000000");
+                return;
+            }
+            
+            String csvFilePath = args[0];
+            
+            // Validar y convertir datagramCount con mejor manejo de errores
+            int datagramCount;
+            try {
+                // Limpiar el string de posibles espacios y caracteres extraños
+                String datagramStr = args[1].trim();
+                datagramCount = Integer.parseInt(datagramStr);
+            } catch (NumberFormatException e) {
+                System.err.println("Error: '" + args[1] + "' no es un número válido de datagramas");
+                System.err.println("Usa números como: 1000, 10000, 100000, 1000000");
+                System.out.println("Uso: java -jar sitm-master-1.0.jar <archivo_csv> <datagramas_a_procesar>");
+                return;
+            }
+            
+            // Validar cantidad de datagramas
+            if (datagramCount <= 0) {
+                System.err.println("Error: La cantidad de datagramas debe ser mayor que 0");
+                System.err.println("Usa números como: 1000, 10000, 100000, 1000000");
+                return;
+            }
+            
+            // Validar que el archivo exista
+            File csvFile = new File(csvFilePath);
+            if (!csvFile.exists()) {
+                System.err.println("Error: No se encuentra el archivo CSV: " + csvFilePath);
+                System.err.println("Verifica que la ruta sea correcta y el archivo exista.");
+                System.err.println("Ejemplo con ruta completa:");
+                System.err.println("java -jar sitm-master-1.0.jar \"C:\\Users\\usuario\\Desktop\\dataset\\datagrams4history.csv\" 1000000");
+                return;
+            }
+            
+            System.out.println("=== CONFIGURACIÓN MASTER NODE ===");
+            System.out.println("Archivo CSV: " + csvFilePath);
+            System.out.println("Datagramas a procesar: " + datagramCount);
+            System.out.println("Archivo encontrado: " + csvFile.exists() + " (tamaño: " + csvFile.length() + " bytes)");
+            System.out.println();
+            
+            // Cargar grafo
+            GraphBuilder builder = new GraphBuilder();
+            Graph graph = builder.build();
+            
+            // Iniciar Master Node Service
+            MasterNodeService masterService = new MasterNodeService(graph, 8080);
+            masterService.start(csvFilePath, datagramCount);
+            
+        } catch (Exception e) {
+            System.err.println("Error iniciando Master Node: " + e.getMessage());
+            System.err.println("Causa: " + e.getCause());
+            e.printStackTrace();
+        }
+    }
+    
+    // ... (rest of the code remains the same)
     private final Graph graph;
     private final int masterPort;
     private final List<WorkerConnection> workers;
@@ -35,11 +102,12 @@ public class MasterNodeService {
         this.running = true;
     }
 
-    public void start(String csvFilePath) throws IOException {
+    public void start(String csvFilePath, int datagramCount) throws IOException {
         // Mostrar banner del Master
         System.out.println(MasterConfig.MASTER_BANNER);
         System.out.println(MasterConfig.MASTER_ROLE);
         System.out.println("Puerto: " + masterPort);
+        System.out.println("Datagramas a procesar: " + datagramCount);
         System.out.println(MasterConfig.SERVER_STARTING);
         
         serverSocket = new ServerSocket(masterPort);
@@ -86,10 +154,10 @@ public class MasterNodeService {
         scanner.close();
         
         // Iniciar procesamiento
-        processDatagrams(csvFilePath);
+        processDatagrams(csvFilePath, datagramCount);
     }
 
-    private void processDatagrams(String csvFilePath) {
+    private void processDatagrams(String csvFilePath, int datagramCount) {
         // Limpiar la ruta: remover comillas si existen
         csvFilePath = csvFilePath.replace("\"", "").trim();
         final String finalCsvPath = csvFilePath; // Para lambda
@@ -100,6 +168,7 @@ public class MasterNodeService {
         System.out.println("Master: Workers activos: " + workers.size());
         System.out.println("Master: Archivo de datos: " + csvFilePath);
         System.out.println("Master: Arcos en grafo: " + graph.getArcs().size());
+        System.out.println("Master: Datagramas a procesar: " + datagramCount);
         System.out.println(MasterConfig.LOADING_DATAGRAMS);
         
         long startTime = System.currentTimeMillis();
@@ -108,7 +177,7 @@ public class MasterNodeService {
         // Cargar datagramas y distribuir a workers usando procesamiento por lotes
         Thread producerThread = new Thread(() -> {
             try {
-                loadDatagramsInBatches(finalCsvPath, 10000); // Aumentar a 10,000 datagramas
+                loadDatagramsInBatches(finalCsvPath, datagramCount); // Usar datagramCount dinámico
                 System.out.println("Master: ✓ Procesamiento por lotes completado");
             } catch (Exception e) {
                 System.err.println("Master: Error cargando datagramas: " + e.getMessage());
@@ -166,93 +235,139 @@ public class MasterNodeService {
         shutdown();
     }
 
-    private void loadDatagramsInBatches(String filePath, int batchSize) {
+    private void loadDatagramsInBatches(String filePath, int targetDatagrams) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         AtomicLong totalProcessed = new AtomicLong(0);
         AtomicBoolean stopProcessing = new AtomicBoolean(false);
         
-        System.out.println("Master: Iniciando procesamiento por lotes de " + batchSize + " datagramas...");
+        // Definir tamaño de lote manejable para evitar OutOfMemoryError
+        int batchSize = Math.min(10000, targetDatagrams); // Máximo 10,000 por lote
         
-        BatchCsvReader.readInBatches(filePath, batchSize, batch -> {
-            // Detenerse después de procesar el primer lote con datos
-            if (stopProcessing.get()) {
-                return;
+        System.out.println("Master: Iniciando procesamiento por lotes de " + batchSize + " datagramas...");
+        System.out.println("Master: Objetivo total: " + targetDatagrams + " datagramas");
+        
+        try (Scanner scanner = new Scanner(new File(filePath), "UTF-8")) {
+            // Saltar header
+            if (scanner.hasNextLine()) {
+                scanner.nextLine();
             }
             
-            // Procesar y distribuir este lote
-            List<Datagram> datagrams = new ArrayList<>();
-            int validRows = 0;
-            int errorRows = 0;
+            List<String[]> batch = new ArrayList<>();
+            int batchCount = 0;
             
-            for (String[] row : batch) {
-                try {
-                    // Formato real: eventType, registerdate, stopId, odometer, latitude, longitude, taskId, lineId, tripId, unknown1, datagramDate, busId
-                    if (row.length < 12) {
-                        errorRows++;
-                        continue;
-                    }
+            while (scanner.hasNextLine() && !stopProcessing.get() && totalProcessed.get() < targetDatagrams) {
+                String line = scanner.nextLine();
+                String[] row = line.split(",");
+                batch.add(row);
+                
+                // Procesar lote cuando alcanza el tamaño o cuando tenemos suficientes para alcanzar el objetivo
+                if (batch.size() >= batchSize || 
+                    (totalProcessed.get() + batch.size() >= targetDatagrams && batch.size() > 0)) {
                     
-                    // Extraer datos según el formato real
-                    String eventType = row[0].replace("\"", "").trim();
-                    String registerDate = row[1].replace("\"", "").trim();
-                    String stopId = row[2].replace("\"", "").trim();
-                    String odometer = row[3].replace("\"", "").trim();
-                    String latitudeStr = row[4].replace("\"", "").trim();
-                    String longitudeStr = row[5].replace("\"", "").trim();
-                    String taskId = row[6].replace("\"", "").trim();
-                    String lineIdStr = row[7].replace("\"", "").trim();
-                    String tripId = row[8].replace("\"", "").trim();
-                    String unknown1 = row[9].replace("\"", "").trim();
-                    String datagramDate = row[10].replace("\"", "").trim();
-                    String busId = row[11].replace("\"", "").trim();
+                    processBatch(batch, formatter, totalProcessed, stopProcessing, targetDatagrams);
+                    batch.clear();
+                    batchCount++;
                     
-                    // Convertir coordenadas (viene en formato -764873683, dividir por 10000000)
-                    double latitude = Double.parseDouble(latitudeStr) / 10000000.0;
-                    double longitude = Double.parseDouble(longitudeStr) / 10000000.0;
+                    // Mostrar progreso
+                    System.out.println("Master: Progreso - Lote " + batchCount + 
+                                     " completado (" + totalProcessed.get() + "/" + targetDatagrams + ")");
                     
-                    // Convertir fecha (formato: 2019-05-27 20:14:43)
-                    LocalDateTime timestamp = LocalDateTime.parse(datagramDate, formatter);
-                    
-                    // Convertir lineId
-                    int lineId = Integer.parseInt(lineIdStr);
-                    
-                    // Determinar orientación (basado en taskId o algún otro criterio)
-                    int orientation = 1; // Por defecto
-                    
-                    Datagram datagram = new Datagram(busId, latitude, longitude, timestamp, lineId, orientation, eventType);
-                    datagrams.add(datagram);
-                    validRows++;
-                    
-                } catch (Exception e) {
-                    errorRows++;
-                    // Mostrar primer error para depuración
-                    if (errorRows == 1) {
-                        System.err.println("Master: Error parsing datagram: " + e.getMessage());
-                        System.err.println("Master: Fila problemática: " + String.join(",", batch.get(0)));
+                    // Pequeña pausa para permitir GC
+                    if (batchCount % 10 == 0) {
+                        System.gc();
+                        Thread.sleep(100);
                     }
                 }
             }
             
-            // Mostrar estadísticas del lote
-            System.out.println("Master: Estadísticas lote - Filas totales: " + batch.size() + 
-                             ", Válidas: " + validRows + ", Errores: " + errorRows + 
-                             ", Datagramas: " + datagrams.size());
-            
-            // Distribuir este lote a workers
-            distributeBatchToWorkers(datagrams);
-            totalProcessed.addAndGet(datagrams.size());
-            
-            System.out.println("Master: Lote procesado - " + datagrams.size() + " datagramas distribuidos (Total: " + totalProcessed.get() + ")");
-            
-            // Detenerse solo si encontramos datagramas válidos y procesamos suficientes
-            if (datagrams.size() > 0 && totalProcessed.get() >= 10000) {
-                System.out.println("Master: ✓ Lote con datos encontrado - Enviando señal de parada a workers");
-                sendStopToAllWorkers();
-                stopProcessing.set(true);
+            // Procesar último lote si tiene datos y no hemos alcanzado el objetivo
+            if (!batch.isEmpty() && !stopProcessing.get() && totalProcessed.get() < targetDatagrams) {
+                processBatch(batch, formatter, totalProcessed, stopProcessing, targetDatagrams);
+                batchCount++;
             }
-        });
+            
+        } catch (Exception e) {
+            System.err.println("Master: Error leyendo archivo: " + e.getMessage());
+            e.printStackTrace();
+        }
         
         System.out.println("Master: ✓ Procesamiento por lotes completado - Total procesado: " + totalProcessed.get());
+        System.out.println("Master: ✓ Objetivo alcanzado: " + (totalProcessed.get() >= targetDatagrams ? "SI" : "NO"));
+    }
+    
+    private void processBatch(List<String[]> batch, DateTimeFormatter formatter, 
+                            AtomicLong totalProcessed, AtomicBoolean stopProcessing, int maxDatagrams) {
+        // Procesar y distribuir este lote
+        List<Datagram> datagrams = new ArrayList<>();
+        int validRows = 0;
+        int errorRows = 0;
+        
+        for (String[] row : batch) {
+            try {
+                // Formato real: eventType, registerdate, stopId, odometer, latitude, longitude, taskId, lineId, tripId, unknown1, datagramDate, busId
+                if (row.length < 12) {
+                    errorRows++;
+                    continue;
+                }
+                
+                // Extraer datos según el formato real
+                String eventType = row[0].replace("\"", "").trim();
+                String registerDate = row[1].replace("\"", "").trim();
+                String stopId = row[2].replace("\"", "").trim();
+                String odometer = row[3].replace("\"", "").trim();
+                String latitudeStr = row[4].replace("\"", "").trim();
+                String longitudeStr = row[5].replace("\"", "").trim();
+                String taskId = row[6].replace("\"", "").trim();
+                String lineIdStr = row[7].replace("\"", "").trim();
+                String tripId = row[8].replace("\"", "").trim();
+                String unknown1 = row[9].replace("\"", "").trim();
+                String datagramDate = row[10].replace("\"", "").trim();
+                String busId = row[11].replace("\"", "").trim();
+                
+                // Convertir coordenadas (viene en formato -764873683, dividir por 10000000)
+                double latitude = Double.parseDouble(latitudeStr) / 10000000.0;
+                double longitude = Double.parseDouble(longitudeStr) / 10000000.0;
+                
+                // Convertir fecha (formato: 2019-05-27 20:14:43)
+                LocalDateTime timestamp = LocalDateTime.parse(datagramDate, formatter);
+                
+                // Convertir lineId
+                int lineId = Integer.parseInt(lineIdStr);
+                
+                // Determinar orientación (basado en taskId o algún otro criterio)
+                int orientation = 1; // Por defecto
+                
+                Datagram datagram = new Datagram(busId, latitude, longitude, timestamp, lineId, orientation, eventType);
+                datagrams.add(datagram);
+                validRows++;
+                
+            } catch (Exception e) {
+                errorRows++;
+                // Mostrar primer error para depuración
+                if (errorRows == 1) {
+                    System.err.println("Master: Error parsing datagram: " + e.getMessage());
+                    System.err.println("Master: Fila problemática: " + String.join(",", batch.get(0)));
+                }
+            }
+        }
+        
+        // Mostrar estadísticas del lote
+        System.out.println("Master: Estadísticas lote - Filas totales: " + batch.size() + 
+                         ", Válidas: " + validRows + ", Errores: " + errorRows + 
+                         ", Datagramas: " + datagrams.size());
+        
+        // Distribuir este lote a workers
+        distributeBatchToWorkers(datagrams);
+        totalProcessed.addAndGet(datagrams.size());
+        
+        System.out.println("Master: Lote procesado - " + datagrams.size() + " datagramas distribuidos (Total: " + totalProcessed.get() + ")");
+        
+        // Detenerse solo si encontramos datagramas válidos y procesamos suficientes
+        if (datagrams.size() > 0 && totalProcessed.get() >= maxDatagrams) {
+            System.out.println("Master: ✓ Lote con datos encontrado - Enviando señal de parada a workers");
+            sendStopToAllWorkers();
+            stopProcessing.set(true);
+        }
     }
     
     private void distributeBatchToWorkers(List<Datagram> datagrams) {
@@ -306,21 +421,62 @@ public class MasterNodeService {
     }
 
     public void printSpeedResults() {
-        System.out.println("\n=== VELOCIDADES PROMEDIO POR ARCO ===\n");
+        System.out.println("\n=== VELOCIDADES PROMEDIO POR ARCO (SITM-MIO) ===\n");
+        
+        if (aggregatedResults.isEmpty()) {
+            System.out.println("No se encontraron arcos con velocidad calculada.");
+            return;
+        }
+        
+        // Mostrar todos los arcos con velocidad, ordenados por velocidad descendente
+        System.out.println("ID_ARCO                              | LINEA | ORIGEN      -> DESTINO     | VELOCIDAD | MUESTRAS | RANGO (km/h)");
+        System.out.println("-------------------------------------|-------|-------------|-------------|-----------|----------|---------------");
         
         aggregatedResults.values().stream()
-            .filter(arcSpeed -> arcSpeed.getSampleCount() >= 5)
+            .filter(arcSpeed -> arcSpeed.getSampleCount() >= 1) // Mostrar todos con al menos 1 muestra
             .sorted(Comparator.comparingDouble(ArcSpeed::getAverageSpeed).reversed())
-            .limit(20)
             .forEach(arcSpeed -> {
-                System.out.println(String.format("%-40s Vel: %6.2f km/h (muestras: %d, min: %5.2f, max: %5.2f)",
-                    arcSpeed.getArc().toString(),
+                Arc arc = arcSpeed.getArc();
+                String arcId = arc.getFrom().getStopId() + "-" + arc.getTo().getStopId() + "-" + arc.getLineId();
+                String fromName = arc.getFrom().getShortName() != null ? arc.getFrom().getShortName() : arc.getFrom().getStopId() + "";
+                String toName = arc.getTo().getShortName() != null ? arc.getTo().getShortName() : arc.getTo().getStopId() + "";
+                
+                // Truncar nombres si son muy largos
+                if (fromName.length() > 11) fromName = fromName.substring(0, 11);
+                if (toName.length() > 11) toName = toName.substring(0, 11);
+                
+                System.out.println(String.format("%-36s | %5d | %-11s -> %-11s | %8.2f | %8d | %5.1f - %5.1f",
+                    arcId,
+                    arc.getLineId(),
+                    fromName,
+                    toName,
                     arcSpeed.getAverageSpeed(),
                     arcSpeed.getSampleCount(),
                     arcSpeed.getMinSpeed(),
                     arcSpeed.getMaxSpeed()
                 ));
             });
+            
+        System.out.println("\n=== RESUMEN ESTADISTICO ===");
+        System.out.println("Total arcos con velocidad: " + aggregatedResults.size());
+        System.out.println("Velocidad promedio general: " + 
+            String.format("%.2f km/h", 
+                aggregatedResults.values().stream()
+                    .mapToDouble(ArcSpeed::getAverageSpeed)
+                    .average()
+                    .orElse(0.0)));
+        System.out.println("Velocidad maxima: " + 
+            String.format("%.2f km/h", 
+                aggregatedResults.values().stream()
+                    .mapToDouble(ArcSpeed::getAverageSpeed)
+                    .max()
+                    .orElse(0.0)));
+        System.out.println("Velocidad minima: " + 
+            String.format("%.2f km/h", 
+                aggregatedResults.values().stream()
+                    .mapToDouble(ArcSpeed::getAverageSpeed)
+                    .min()
+                    .orElse(0.0)));
     }
 
     public void addWorkerResults(int workerId, Map<String, ArcSpeed> results) {
@@ -337,26 +493,6 @@ public class MasterNodeService {
             executor.awaitTermination(5, TimeUnit.SECONDS);
         } catch (Exception e) {
             // Ignorar errores de cierre
-        }
-    }
-
-    public static void main(String[] args) {
-        try {
-            System.out.println(MasterConfig.LOADING_GRAPH);
-            GraphBuilder graphBuilder = new GraphBuilder();
-            Graph graph = graphBuilder.build();
-            
-            System.out.println(String.format(MasterConfig.GRAPH_LOADED, graph.getArcs().size()));
-            
-            // Usar la ruta por defecto directamente
-            String csvPath = MasterConfig.DEFAULT_CSV_PATH;
-            
-            MasterNodeService master = new MasterNodeService(graph, MasterConfig.MASTER_PORT);
-            master.start(csvPath);
-            
-        } catch (Exception e) {
-            System.err.println("Error en Master: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 }
