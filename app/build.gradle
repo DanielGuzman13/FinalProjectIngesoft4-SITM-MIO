@@ -77,9 +77,53 @@ task workerJar(type: Jar) {
     }
 }
 
+// Experiments JAR
+task experimentsJar(type: Jar) {
+    archiveBaseName = 'sitm-experiments'
+    archiveVersion = '1.0'
+    
+    manifest {
+        attributes(
+            'Main-Class': 'org.mio.processing.experiments.ExperimentRunner'
+        )
+    }
+    
+    from sourceSets.main.output
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.filter { it.exists() }.collect { it.isDirectory() ? it : zipTree(it) }
+    } {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+}
+
+// Real Experiments JAR
+task realExperimentsJar(type: Jar) {
+    archiveBaseName = 'sitm-real-experiments'
+    archiveVersion = '1.0'
+    
+    manifest {
+        attributes(
+            'Main-Class': 'org.mio.processing.experiments.RealExperimentRunner'
+        )
+    }
+    
+    from sourceSets.main.output
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.filter { it.exists() }.collect { it.isDirectory() ? it : zipTree(it) }
+    } {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+}
+
 // Tarea para construir todos los JARs
 task buildAllJars {
-    dependsOn masterJar, workerJar
+    dependsOn masterJar, workerJar, experimentsJar, realExperimentsJar
 }
 
 // Aplicación por defecto (para desarrollo)

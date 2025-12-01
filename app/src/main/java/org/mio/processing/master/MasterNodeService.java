@@ -92,6 +92,9 @@ public class MasterNodeService {
     private final ExecutorService executor;
     private ServerSocket serverSocket;
     private volatile boolean running;
+    private int customBatchSize = 10000; // Tamaño de lote configurable
+    private boolean autoMode = false; // Modo automático para experimentos
+    private int expectedWorkers = 3; // Número esperado de workers configurable
 
     public MasterNodeService(Graph graph, int masterPort) {
         this.graph = graph;
@@ -100,6 +103,18 @@ public class MasterNodeService {
         this.aggregatedResults = new ConcurrentHashMap<>();
         this.executor = Executors.newFixedThreadPool(10);
         this.running = true;
+    }
+    
+    public void setBatchSize(int batchSize) {
+        this.customBatchSize = batchSize;
+    }
+    
+    public void setAutoMode(boolean autoMode) {
+        this.autoMode = autoMode;
+    }
+    
+    public void setExpectedWorkers(int expectedWorkers) {
+        this.expectedWorkers = expectedWorkers;
     }
 
     public void start(String csvFilePath, int datagramCount) throws IOException {
@@ -132,13 +147,13 @@ public class MasterNodeService {
         
         System.out.println(MasterConfig.SERVER_STARTED);
         System.out.println(MasterConfig.WAITING_WORKERS);
-        System.out.println("Master: Workers conectados: " + workers.size() + "/" + MasterConfig.EXPECTED_WORKERS);
+        System.out.println("Master: Workers conectados: " + workers.size() + "/" + expectedWorkers);
         
         // Esperar a que todos los workers se conecten
-        while (workers.size() < MasterConfig.EXPECTED_WORKERS) {
+        while (workers.size() < expectedWorkers) {
             try {
                 Thread.sleep(1000);
-                System.out.println("Master: Workers conectados: " + workers.size() + "/" + MasterConfig.EXPECTED_WORKERS + " (esperando...)");
+                System.out.println("Master: Workers conectados: " + workers.size() + "/" + expectedWorkers + " (esperando...)");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -148,10 +163,20 @@ public class MasterNodeService {
         System.out.println(MasterConfig.ALL_WORKERS_CONNECTED);
         System.out.println(MasterConfig.START_PROCESSING);
         
-        // Esperar a que el usuario presione Enter
-        Scanner scanner = new Scanner(System.in);
-        scanner.nextLine();
-        scanner.close();
+        // Esperar a que el usuario presione Enter (solo en modo manual)
+        if (!autoMode) {
+            Scanner scanner = new Scanner(System.in);
+            scanner.nextLine();
+            scanner.close();
+        } else {
+            // Modo automático: iniciar procesamiento después de 2 segundos
+            System.out.println("Master: Modo automático - Iniciando procesamiento en 2 segundos...");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
         
         // Iniciar procesamiento
         processDatagrams(csvFilePath, datagramCount);
@@ -241,7 +266,7 @@ public class MasterNodeService {
         AtomicBoolean stopProcessing = new AtomicBoolean(false);
         
         // Definir tamaño de lote manejable para evitar OutOfMemoryError
-        int batchSize = Math.min(10000, targetDatagrams); // Máximo 10,000 por lote
+        int batchSize = Math.min(customBatchSize, targetDatagrams); // Usar tamaño configurable
         
         System.out.println("Master: Iniciando procesamiento por lotes de " + batchSize + " datagramas...");
         System.out.println("Master: Objetivo total: " + targetDatagrams + " datagramas");
