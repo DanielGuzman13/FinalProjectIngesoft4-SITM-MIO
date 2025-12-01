@@ -1,6 +1,10 @@
 package org.mio.model;
 
-public class Arc {
+import java.io.Serializable;
+
+public class Arc implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     private Stop from;
     private Stop to;
     private int lineId;

@@ -103,13 +103,12 @@ public class MasterNodeService {
         System.out.println(MasterConfig.LOADING_DATAGRAMS);
         
         long startTime = System.currentTimeMillis();
-        AtomicLong totalDatagrams = new AtomicLong(0);
-        AtomicLong distributedCount = new AtomicLong(0);
+        AtomicLong totalProcessed = new AtomicLong(0);
 
         // Cargar datagramas y distribuir a workers usando procesamiento por lotes
         Thread producerThread = new Thread(() -> {
             try {
-                loadDatagramsInBatches(finalCsvPath, 1000); // Empezar con 1000 datagramas
+                loadDatagramsInBatches(finalCsvPath, 10000); // Aumentar a 10,000 datagramas
                 System.out.println("Master: ✓ Procesamiento por lotes completado");
             } catch (Exception e) {
                 System.err.println("Master: Error cargando datagramas: " + e.getMessage());
@@ -119,60 +118,49 @@ public class MasterNodeService {
 
         producerThread.start();
 
-        // Monitorear distribución en tiempo real
-        Thread monitorThread = new Thread(() -> {
-            while (distributedCount.get() < totalDatagrams.get() || totalDatagrams.get() == 0) {
-                try {
-                    Thread.sleep(MasterConfig.MONITOR_INTERVAL_MS);
-                    if (totalDatagrams.get() > 0) {
-                        double percentage = (distributedCount.get() * 100.0) / totalDatagrams.get();
-                        System.out.println(String.format(MasterConfig.DISTRIBUTION_PROGRESS, 
-                            distributedCount.get(), totalDatagrams.get(), percentage));
-                    }
-                } catch (InterruptedException e) {
-                    break;
-                }
-            }
-        });
-        
-        monitorThread.start();
-
+        // Esperar a que el thread de procesamiento termine
         try {
             producerThread.join();
-            monitorThread.interrupt();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
             
-            System.out.println(MasterConfig.DISTRIBUTION_COMPLETE);
-            System.out.println(MasterConfig.WAITING_RESULTS);
-            
-            // Esperar a que todos los workers terminen
+        System.out.println(MasterConfig.DISTRIBUTION_COMPLETE);
+        System.out.println(MasterConfig.WAITING_RESULTS);
+        
+        // Esperar a que todos los workers terminen
+        try {
             while (workers.stream().anyMatch(w -> w.isProcessing())) {
                 Thread.sleep(1000);
                 System.out.println("Master: Workers procesando... (" + 
                                  workers.stream().mapToInt(w -> w.getResults().size()).sum() + " arcos calculados hasta ahora)");
             }
-
-            System.out.println(MasterConfig.SENDING_STOP_SIGNAL);
-            for (WorkerConnection worker : workers) {
-                worker.sendStop();
-            }
-
-            Thread.sleep(2000);
-            System.out.println(MasterConfig.PROCESSING_COMPLETE);
-            System.out.println(MasterConfig.AGGREGATING_RESULTS);
-            
-            aggregateResults();
-            
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+
+        System.out.println(MasterConfig.SENDING_STOP_SIGNAL);
+        for (WorkerConnection worker : workers) {
+            worker.sendStop();
+        }
+
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        System.out.println(MasterConfig.PROCESSING_COMPLETE);
+        System.out.println(MasterConfig.AGGREGATING_RESULTS);
+        
+        aggregateResults();
 
         long endTime = System.currentTimeMillis();
         double processingTime = (endTime - startTime) / 1000.0;
         
         System.out.println(MasterConfig.RESULTS_BANNER);
-        System.out.println(String.format(MasterConfig.FINAL_SUMMARY, 
-            workers.size(), totalDatagrams.get(), processingTime, 
-            totalDatagrams.get() / processingTime, aggregatedResults.size()));
+        System.out.println(String.format("Resumen: %d workers, %.0f segundos, %.1f datagramas/segundo, %d arcos con velocidad", 
+            workers.size(), processingTime, 
+            totalProcessed.get() / processingTime, aggregatedResults.size()));
 
         printSpeedResults();
         shutdown();
@@ -256,8 +244,8 @@ public class MasterNodeService {
             
             System.out.println("Master: Lote procesado - " + datagrams.size() + " datagramas distribuidos (Total: " + totalProcessed.get() + ")");
             
-            // Detenerse solo si encontramos datagramas válidos en este lote
-            if (datagrams.size() > 0) {
+            // Detenerse solo si encontramos datagramas válidos y procesamos suficientes
+            if (datagrams.size() > 0 && totalProcessed.get() >= 10000) {
                 System.out.println("Master: ✓ Lote con datos encontrado - Enviando señal de parada a workers");
                 sendStopToAllWorkers();
                 stopProcessing.set(true);

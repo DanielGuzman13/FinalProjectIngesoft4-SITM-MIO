@@ -1,6 +1,10 @@
 package org.mio.model;
 
-public class Stop {
+import java.io.Serializable;
+
+public class Stop implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     private int stopId;
     private String shortName;
     private String longName;
